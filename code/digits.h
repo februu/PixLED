@@ -1,5 +1,5 @@
 /* 
-  Digits are described as a relative coordinates of pixels from top left.
+  Big digits described as a relative coordinates of pixels from top left.
   (see digits.png)
 */
 const byte DIGITS[10][18]= {

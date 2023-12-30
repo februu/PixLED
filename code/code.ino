@@ -3,89 +3,66 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 
-#include "digits.h"
+#include "LedDisplay.h"
+#include "Requests.h"
+#include "constants.h"
 #include "secrets.h"
 
-#define LED_PIN         4     // Digital output for LED Matrix
-#define BRIGHTNESS      30    // Brightness of LEDs
-#define ROW_LENGTH      16    // Amount of LED diodes in one row
-#define NO_OF_PIXELS    256   // Number of all diodes
-
-#define TIME_URL        "https://timeapi.io/api/Time/current/zone?timeZone=Europe/Warsaw"   // Api address
-
 hw_timer_t *timer = NULL;
+
 HTTPClient http;
 Adafruit_NeoPixel pixels(NO_OF_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
 
-byte hours = 0, minutes = 0;
+byte hours = 0, minutes = 0, day = 0, month = 0, year = 0;
 volatile byte seconds = 0;
 
+float prices[8];
+
+Request request(&http);
+LedDisplay ld(&pixels, &month, &day, &hours, &minutes);
+
+// Handle timer interrupt every 1 second.
 void IRAM_ATTR onTimerInterrupt(){
-  seconds++;
-  if (seconds == 60) {
-    seconds = 0;
-    minutes += 1;
+seconds++;
 
-      if (minutes == 60) {
-      minutes = 0;
-      hours = (hours+1)%24;
-      }
-  }
-}
+    if (seconds >= 60) {
+        seconds = 0;
+        minutes++;
 
-// Handle the LED matrix behavior where odd rows have reversed numbering.
-byte normalizePixelCoords(byte pixel) {
-  byte row = (pixel / ROW_LENGTH) + 1;
+        if (minutes >= 60) {
+            minutes = 0;
+            hours++;
 
-  if (row % 2 == 1)
-    return (ROW_LENGTH * row) - (pixel % ROW_LENGTH) - 1;
+            if (hours >= 24) {
+                hours = 0;
+                day++;
 
-  return pixel;
-}
+                if (day > daysInMonth[month - 1]) {
+                    if (month == 2 && isLeapYear(year)) {
+                        if (day > 29) {
+                            day = 1;
+                            month++;
+                        }
+                    } else {
+                        day = 1;
+                        month++;
+                    }
 
-void displayTime() {
-
-  byte numbersToDisplay[4];
-
-  numbersToDisplay[0] = hours/10;
-  numbersToDisplay[1] = hours%10;
-  numbersToDisplay[2] = minutes/10;
-  numbersToDisplay[3] = minutes%10;
-
-  for (byte i = 0; i < 4; i++) {
-    
-    for (byte j = 0; j < 18; j++){
-
-      byte pixel = CLOCK_POSITION[i] + DIGITS[numbersToDisplay[i]][j];
-
-      if (pixel == CLOCK_POSITION[i] && j != 0)
-        break;
-
-      pixels.setPixelColor(normalizePixelCoords(pixel), pixels.Color(150, 0, 150));
-      
+                    if (month > 12) {
+                        month = 1;
+                        year++;
+                    }
+                }
+            }
+        }
     }
-  }
 }
 
-void updateTime() {
-  http.begin(TIME_URL);
-    int httpCode = http.GET();
-
-  // Wait for response
-  while (httpCode == 0) 
-    delay(50);
-  
-    StaticJsonDocument<1024> doc;
-
-    if (deserializeJson(doc, http.getString()))
-      return;
-    
-    hours = doc["hour"].as<byte>();
-    minutes = doc["minute"].as<byte>();
-    seconds = doc["seconds"].as<byte>();
-   
-    http.end();
-      
+// If wifi disconnects, connect again.
+void onWifiDisconnect(WiFiEvent_t event, WiFiEventInfo_t info) {
+  WiFi.useStaticBuffers(true);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(SSID, PASSWORD);
 }
 
 void setup() {
@@ -94,17 +71,19 @@ void setup() {
   pixels.setBrightness(BRIGHTNESS);
 
   // Connect to Wifi and play connecting animation
+  WiFi.onEvent(onWifiDisconnect, WiFiEvent_t::ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  WiFi.useStaticBuffers(true);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PASSWORD);
-  int i;
+  byte i;
   while(WiFi.status() != WL_CONNECTED){
     pixels.clear();
-    pixels.setPixelColor(normalizePixelCoords(i), pixels.Color(0, 255, 0));
+    pixels.setPixelColor(ld.normalizePixelCoords(i), pixels.Color(0, 255, 0));
     pixels.show();
     i++;
   }
-
-  // Send http request
-    updateTime();
+  pixels.clear();
+  request.timeInit(year, month, day, hours, minutes, seconds);
 
   // Begin timer and attach 1s interrupt.
   timer = timerBegin(0, 80, true);
@@ -115,9 +94,6 @@ void setup() {
 }
 
 void loop() {
-  pixels.clear();
-  displayTime();
-  pixels.show();
-  delay(200);
+  ld.display();
 }
 
