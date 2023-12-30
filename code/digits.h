@@ -1,9 +1,7 @@
-
 /* 
   Digits are described as a relative coordinates of pixels from top left.
   (see digits.png)
 */
-
 const byte DIGITS[10][18]= {
     {0, 1, 2, 3, 16, 19, 32, 35, 48, 51, 64, 67, 80, 81, 82, 83},
     {2, 18, 34, 50, 66, 82},
@@ -20,5 +18,4 @@ const byte DIGITS[10][18]= {
 /* 
   Pixels where clock digits should be displayed.
 */
-
 const byte CLOCK_POSITION[] = {19, 25, 147, 153};
