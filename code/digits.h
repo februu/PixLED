@@ -1,5 +1,5 @@
 /* 
-  Big digits described as a relative coordinates of pixels from top left.
+  Big digits described as a relative coordinates of pixels from top left. 6x4 font.
   (see digits.png)
 */
 const byte DIGITS[10][18]= {
@@ -17,5 +17,5 @@ const byte DIGITS[10][18]= {
 
 /* 
   Pixels where clock digits should be displayed.
-*/
+*/ 
 const byte CLOCK_POSITION[] = {19, 25, 147, 153};

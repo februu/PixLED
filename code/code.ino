@@ -8,7 +8,7 @@
 #include "constants.h"
 #include "secrets.h"
 
-hw_timer_t *timer = NULL;
+hw_timer_t * timer = NULL;
 
 HTTPClient http;
 Adafruit_NeoPixel pixels(NO_OF_PIXELS, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -18,44 +18,44 @@ volatile byte seconds = 0;
 
 float prices[8];
 
-Request request(&http);
-LedDisplay ld(&pixels, &month, &day, &hours, &minutes);
+Request request( & http);
+LedDisplay ld( & pixels, & month, & day, & hours, & minutes);
 
 // Handle timer interrupt every 1 second.
-void IRAM_ATTR onTimerInterrupt(){
-seconds++;
+void IRAM_ATTR onTimerInterrupt() {
+  seconds++;
 
-    if (seconds >= 60) {
-        seconds = 0;
-        minutes++;
+  if (seconds >= 60) {
+    seconds = 0;
+    minutes++;
 
-        if (minutes >= 60) {
-            minutes = 0;
-            hours++;
+    if (minutes >= 60) {
+      minutes = 0;
+      hours++;
 
-            if (hours >= 24) {
-                hours = 0;
-                day++;
+      if (hours >= 24) {
+        hours = 0;
+        day++;
 
-                if (day > daysInMonth[month - 1]) {
-                    if (month == 2 && isLeapYear(year)) {
-                        if (day > 29) {
-                            day = 1;
-                            month++;
-                        }
-                    } else {
-                        day = 1;
-                        month++;
-                    }
-
-                    if (month > 12) {
-                        month = 1;
-                        year++;
-                    }
-                }
+        if (day > daysInMonth[month - 1]) {
+          if (month == 2 && isLeapYear(year)) {
+            if (day > 29) {
+              day = 1;
+              month++;
             }
+          } else {
+            day = 1;
+            month++;
+          }
+
+          if (month > 12) {
+            month = 1;
+            year++;
+          }
         }
+      }
     }
+  }
 }
 
 // If wifi disconnects, connect again.
@@ -76,7 +76,8 @@ void setup() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(SSID, PASSWORD);
   byte i;
-  while(WiFi.status() != WL_CONNECTED){
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.println(WiFi.status());
     pixels.clear();
     pixels.setPixelColor(ld.normalizePixelCoords(i), pixels.Color(0, 255, 0));
     pixels.show();
@@ -87,7 +88,7 @@ void setup() {
 
   // Begin timer and attach 1s interrupt.
   timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTimerInterrupt, true);
+  timerAttachInterrupt(timer, & onTimerInterrupt, true);
   timerAlarmWrite(timer, 1000000, true);
   timerAlarmEnable(timer);
 
@@ -96,4 +97,3 @@ void setup() {
 void loop() {
   ld.display();
 }
-
